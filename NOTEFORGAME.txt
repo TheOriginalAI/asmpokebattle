@@ -1,0 +1,6 @@
+The Pokemon Ascii (Bulbasaur) belongs to Lunatic 42 and was found at thw website ASCII Art Archive.
+I do not own the Pokemon franchise nor do I own the ASCII artwork!
+
+The only thing I have created is the code for the assembly game 'pokemonbattle' on my GitHub page (TheOriginalAI).
+
+Website ASCII art was found: https://www.asciiart.eu/video-games/pokemon

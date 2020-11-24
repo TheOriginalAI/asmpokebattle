@@ -1,0 +1,338 @@
+%include "/usr/local/share/csc314/asm_io.inc"
+
+
+segment .data
+
+                welcome db      10, "A wild Bulbasaur appeared!", 10, 0
+                welcome2        db      "You sent out Eevee!",10,10,10,10,0
+
+                eatk1   db "tackle",0
+                eatk2   db "swift",0
+                eevee   db      "Eevee",0
+                eatkuse db      "Eevee used %s!", 10, 0
+                edam    db      "Eevee took %d damage!",0
+                ehealth db      " Eevee has %d health left!",10,10,0
+
+                batk1   db      "razor leaf",0
+                batk2   db      "bite",0
+                bulba   db      "Bulbasaur",0
+                batkuse db      "Bulbasaur used %s!",10,0
+                bdam    db      "Bulbasaur took %d damage!",0
+                bhealth db      " Bulbasaur has %d health left!",10,10,0
+
+                miss    db "%s move missed!",10,0
+                funfact db      "DID YOU KNOW: The old Pokemon Games were made in Assembly Language!", 10,0
+                bagmsg  db      "You IDIOT. You forgot your bag in the Pokemon Center!", 10, "WAIT. You were smart enough to buy PokeBalls! Do you want to use one? (Yes = 1, N = 2)", 10, 0
+                choice  db      10,10, "What Do You Want Eevee To Do:", 10,"1 = tackle",10,"2 = swift",10,"3 = bag",10,"4 = exit (I.E:.....run)",10, 10, 0
+                msg             db      "Input Invalid!", 10, 0
+                iscaught        db      10, 10, "You caught Bulbasaur!!!", 10, 10, 0
+                brokefree       db      "Bulbasaur broke free!", 10, 0
+                wobble  db      10,10,"*Wobble-y Noise*", 10,10,0
+                throwpoke       db      10, 10,"You threw a Pokeball!",10,10,0
+                exitmsg db      10, 10, "Thanks for playing!", 10, 10, 10, 0
+
+                bulbdown db     "Bulbasaur has fainted, player wins!",10,10,10, "But just like in the REAL Pokemon Games, YOU GET NOTHING!", 10 ,0
+                evedown db      "Eevee has fainted, computer wins!",10,0
+
+
+                filename        db      "bulb.txt",0
+                mode            db      "r",0
+                fmt                     db      "%s", 0
+
+segment .bss
+        mystring        resd    100
+        filehandler     resd    1
+
+segment .text
+        global  asm_main
+        extern printf
+        extern fopen
+        extern  time
+        extern  rand
+        extern  srand
+        extern  fgets
+
+
+
+asm_main:
+        push    ebp
+        mov             ebp, esp
+        ; ********** CODE STARTS HERE **********
+
+        push    welcome
+        call    printf
+        push    welcome2
+        call    printf
+        add             esp, 8
+
+        mov             esi, 40 ;Eevee Health
+        mov             edi, 30 ;Bulbasaur Health
+
+makechoice:
+
+;THIS IS SUPPOSED TO PRINT OUT BULB TEXT FILE
+           push    mode
+           push    filename
+           call    fopen
+           add     esp, 8
+           mov DWORD [filehandler], eax
+           mov     ebx, 0
+
+           toploop:
+               cmp     ebx, 16
+               jge     endloop
+               push    DWORD [filehandler]
+               push    200
+               push    mystring
+               call    fgets
+               add     esp, 12
+
+               push    mystring
+               push    fmt
+               call    printf
+               add     esp, 8
+               inc     ebx
+                           jmp     toploop
+               endloop:
+;DONE PRINTING TEXT FILE
+
+
+;CALL RAND FUNCTION SETUP
+        push    0
+        call    time
+        add             esp, 4
+        push    eax
+        call    srand
+        add             esp, 4
+;CALL RAND SETUP DONE
+
+
+;PLAYER CHOICE
+        mov     eax, choice
+        call    print_string
+
+        call    read_int
+
+        cmp             eax, 1 ;attack (tackle)
+        je              tackle
+        cmp             eax, 2 ;attack (swift)
+        je              swift
+        cmp             eax, 3 ;bag
+        je              bag
+        cmp             eax, 4 ;exit
+        je              exitgame
+
+        cmp             eax, 86
+        push    funfact
+        call    printf
+        add             esp, 4
+        jmp             makechoice
+
+        jmp             error   ;input does not match, jmp to error msg then choice
+;PLAYER CHOICE DONE
+
+
+        movemiss:
+                push    miss
+                call    printf
+                jmp             makechoice
+
+
+;START OF BULBASAUR ATTACKS
+        bulbasaur:                      ;USES RAND TO PICK AN ATTACK
+                call    rand
+                cdq
+                mov             ebx, 2
+                idiv    ebx
+                mov             eax, edx
+                cmp             eax, 0  ;If 0, jmp to Bulbatk, if 1 go to Bulbatk2
+                je              Bulbatk1
+
+        Bulbatk1:       ;razor leaf
+                call    rand
+                cdq
+                mov             ebx, 2
+                idiv    ebx
+                cmp             edx, 1          ;If 1, move misses
+                push    bulba
+                je              movemiss
+
+                push    batk1   ;8 damage, razor leaf
+                push    batkuse
+                call    printf
+                add             esp,4
+
+                sub     esi, 8  ;Eevee took 8 damage from razor leaf
+                push    8
+                push    edam
+                call    printf
+                add             esp, 8
+
+                push    esi     ;states Eevee health
+                push    ehealth
+                call    printf
+
+                cmp             esi, 0
+                jle             efaint
+                jmp     makechoice
+
+
+                Bulbatk2:       ;bite
+                call    rand
+                cdq
+                mov     ebx, 2
+                idiv    ebx
+                cmp     edx, 1  ;If 1, move misses
+                push    bulba
+                je      movemiss
+
+                push    batk2   ;10 damage, bite
+                push    batkuse
+                call    printf
+                add     esp,4
+
+                sub     esi, 10  ;Eevee took 10 damage from bite
+                push    10
+                push    edam
+                call    printf
+                add     esp, 8
+
+                push    esi     ;states Eevee health
+                push    ehealth
+                call    printf
+
+                cmp     esi, 0
+                jle     efaint
+                jmp     makechoice
+;END OF BULBASAUR ATTACKS
+
+;START OF EEVEE ATTACKS
+          tackle:
+                call    rand
+                cdq
+                mov     ebx, 2
+                idiv    ebx
+                                mov             eax, edx
+                cmp     eax, 1  ;If 0, move misses Bulbasaur
+                                je              cont
+                push    eevee
+                push    miss
+                                call    printf
+                                jmp             bulbasaur
+
+                                cont:
+                push eatk1      ;5 damage, tackle
+                push eatkuse
+                call printf
+                add esp, 4
+
+                sub edi, 5      ;Bulbasaur took 5 damage from tackle
+                push 5
+                push bdam
+                call printf
+                add esp, 8
+
+                push edi
+                push bhealth
+                call printf
+
+                cmp edi, 0      ;If Bulbasaur's health is 0, then player wins jump to bulb faint msg
+                jle     bfaint
+
+                                call    rand
+                cdq
+                mov     ebx, 2
+                idiv    ebx
+                cmp     edx, 1  ;If 1, jmp to razor leaf
+                je      Bulbatk1
+                jmp     Bulbatk2
+
+        swift:
+
+                push eatk2      ;2 damage, swift never misses
+                push eatkuse
+                call printf
+                add esp, 4
+
+                sub edi, 2      ;Bulbasaur took 10 damage from swift
+                push 2
+                push bdam
+                call printf
+                add esp, 8
+
+                push edi        ;States Bulbasaurs Health
+                push bhealth
+                call printf
+
+                cmp edi, 0
+                jle bfaint
+                jmp bulbasaur
+;END OF EEVEE ATTACKS
+
+
+;CODE TO CATCH BULBASAUR
+        pokeball:
+                push    throwpoke
+                call    printf
+                add esp, 4
+
+                catch:
+                        push    wobble
+                        call    printf
+                        add             esp, 8
+                        call    rand
+                        cdq
+                        mov             ebx, 4
+                        idiv    ebx
+                        mov             eax, edx
+                        cmp             eax, 1 ;If -= to 1, playr catches Bulbasaur otherwise jmp to broke
+                        jle             caught
+                        jmp broke
+
+        caught:                         ;Prints player caught Bulbasaur, end game
+                push    iscaught
+                call    printf
+                add             esp, 12
+                jmp             exitgame
+
+
+                broke:
+                        push    brokefree       ;Bulbasaur is not caught, go back to choices
+                        call    printf
+                        add             esp, 8
+                        jmp makechoice
+;CODE TO CATCH DONE
+
+
+        bag:
+                mov eax, bagmsg
+                call print_string
+                call read_int
+                cmp eax, 1      ;if 1, jmp to throw pokeball
+                je      pokeball
+                cmp     eax, 2
+                je makechoice
+                jmp error
+
+        error:                          ;If player enters num no equal to choices. print error msg
+                mov eax, msg
+                call print_string
+                jmp makechoice
+
+        bfaint:
+                push    bulbdown
+                call    printf
+                jmp     exitgame
+        efaint:
+                push    evedown
+                call    printf
+
+        exitgame:
+                push exitmsg
+                call printf
+
+        ; *********** CODE ENDS HERE ***********
+        mov             eax, 0
+        mov             esp, ebp
+        pop             ebp
+        ret
